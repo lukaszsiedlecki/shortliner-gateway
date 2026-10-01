@@ -1,0 +1,58 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [master]
+
+env:
+  IMAGE_NAME: ghcr.io/lukaszsiedlecki/shortliner-gateway
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set short SHA
+        id: vars
+        run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:sha-${{ steps.vars.outputs.short_sha }}
+
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+
+  notify-homelab:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch deploy event to homelab repo
+        uses: peter-evans/repository-dispatch@v4
+        with:
+          token: ${{ secrets.HOMELAB_DISPATCH_PAT }}
+          repository: lukaszsiedlecki/homelab
+          event-type: deploy-image
+          client-payload: |
+            {
+              "service": "shortliner-gateway",
+              "tag": "sha-${{ needs.build-and-push.outputs.short_sha }}"
+            }

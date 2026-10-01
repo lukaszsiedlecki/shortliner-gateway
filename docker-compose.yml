@@ -1,0 +1,14 @@
+services:
+  shortliner-gateway:
+    build: .
+    container_name: shortliner-gateway-app
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    env_file:
+      - .env.local
+    networks:
+      - shortliner-net
+
+networks:
+  shortliner-net:
+    external: true
