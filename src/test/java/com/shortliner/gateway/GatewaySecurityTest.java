@@ -62,6 +62,13 @@ class GatewaySecurityTest {
     }
 
     @BeforeEach
+    void sendHostHeaderLikeABrowser() {
+        // The mock exchange has no Host header, which PreserveHostHeader would forward as-is
+        // (and fail on); real browsers always send one.
+        webTestClient = webTestClient.mutate().defaultHeader("Host", "shortliner.local").build();
+    }
+
+    @BeforeEach
     void drainUpstream() throws InterruptedException {
         while (upstream.takeRequest(0, TimeUnit.MILLISECONDS) != null) {
             // discard requests left over from a previous test
@@ -127,6 +134,19 @@ class GatewaySecurityTest {
         assertThat(forwarded).isNotNull();
         assertThat(forwarded.getPath()).isEqualTo("/shorten/abc123");
         assertThat(forwarded.getHeader("Authorization")).isNull();
+    }
+
+    @Test
+    void backendsSeeTheBrowserFacingHost() throws InterruptedException {
+        upstream.enqueue(new MockResponse().setResponseCode(404));
+
+        webTestClient.get().uri("/api/shortliner/shorten/abc123")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        RecordedRequest forwarded = upstream.takeRequest(5, TimeUnit.SECONDS);
+        assertThat(forwarded).isNotNull();
+        assertThat(forwarded.getHeader("Host")).isEqualTo("shortliner.local");
     }
 
     @Test

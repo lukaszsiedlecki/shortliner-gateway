@@ -23,4 +23,6 @@ USER 1000
 
 EXPOSE 8084
 
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+# Netty still uses sun.misc.Unsafe and loads native libs; without these flags Java 25
+# prints multi-line warnings to stderr, which end up as non-JSON lines in Loki.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "--sun-misc-unsafe-memory-access=allow", "--enable-native-access=ALL-UNNAMED", "-jar", "app.jar"]
