@@ -14,7 +14,7 @@ browser ──SESSION cookie──> shortliner-gateway ──Bearer JWT──> s
 
 ## Tech Stack
 
-- Java 25, Spring Boot 3.5, Spring Cloud 2025.0 (Gateway Server WebFlux 4.3)
+- Java 25, Spring Boot 4.1, Spring Cloud 2025.1 (Gateway Server WebFlux 5.0)
 - Spring Security OAuth2 Client
 - Micrometer (Prometheus, OpenTelemetry tracing), ECS JSON logs
 
