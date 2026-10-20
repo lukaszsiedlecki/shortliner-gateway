@@ -9,7 +9,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.boot.micrometer.metrics.test.autoconfigure.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
@@ -31,6 +32,8 @@ import static org.springframework.security.test.web.reactive.server.SecurityMock
         "keycloak.client-secret=test-secret"
 })
 @AutoConfigureWebTestClient
+// Tests disable metrics exporters by default, which would leave /actuator/prometheus unmapped.
+@AutoConfigureMetrics
 class GatewaySecurityTest {
 
     // One fake upstream for every route; the recorded path tells which route forwarded it.
@@ -225,6 +228,14 @@ class GatewaySecurityTest {
         webTestClient.get().uri("/actuator/health/readiness")
                 .exchange()
                 .expectStatus().isOk();
+    }
+
+    @Test
+    void prometheusIsOpen() {
+        webTestClient.get().uri("/actuator/prometheus")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class).value(body -> assertThat(body).contains("application=\"shortliner-gateway\""));
     }
 
     private OidcLoginMutator login() {
